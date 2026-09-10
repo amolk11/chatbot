@@ -1,7 +1,7 @@
 """FastAPI application entry point and factory."""
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from fastapi import FastAPI
 
@@ -12,7 +12,7 @@ from app.core.logging import setup_logging
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Lifespan context manager for application startup and shutdown events."""
-    settings = getattr(app.state, "settings", get_settings())
+    settings: Settings = getattr(app.state, "settings", get_settings())
     setup_logging(settings)
     yield
 

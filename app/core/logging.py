@@ -5,25 +5,25 @@ import json
 import logging
 import re
 import sys
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from app.core.config import Settings, get_settings
 from app.core.constants import LogFormat
 
 # Context variables for distributed request tracing
-correlation_id_ctx: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
+correlation_id_ctx: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "correlation_id", default=None
 )
-conversation_id_ctx: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
+conversation_id_ctx: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "conversation_id", default=None
 )
 
 # Regex patterns to scrub sensitive data from log records
 SENSITIVE_PATTERNS = [
     re.compile(r"sk-[a-zA-Z0-9_-]{20,}", re.IGNORECASE),  # OpenAI / Generic API keys
-    re.compile(r"AIza[0-9A-Za-z-_]{35}", re.IGNORECASE),   # Google API keys
-    re.compile(r"lsv2_[a-z0-9_]{20,}", re.IGNORECASE),     # LangSmith API keys
+    re.compile(r"AIza[0-9A-Za-z-_]{35}", re.IGNORECASE),  # Google API keys
+    re.compile(r"lsv2_[a-z0-9_]{20,}", re.IGNORECASE),  # LangSmith API keys
     re.compile(r"bearer\s+[a-zA-Z0-9_\-\.]+", re.IGNORECASE),  # Bearer tokens
     re.compile(r"\"password\"\s*:\s*\"[^\"]+\"", re.IGNORECASE),  # JSON password fields
 ]
@@ -57,8 +57,8 @@ class JSONFormatter(logging.Formatter):
     """Structured JSON log formatter for production environments."""
 
     def format(self, record: logging.LogRecord) -> str:
-        log_data: Dict[str, Any] = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+        log_data: dict[str, Any] = {
+            "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -69,8 +69,9 @@ class JSONFormatter(logging.Formatter):
         if record.exc_info:
             log_data["exception"] = self.formatException(record.exc_info)
 
-        if hasattr(record, "extra_fields") and isinstance(record.extra_fields, dict):  # type: ignore[attr-defined]
-            log_data.update(record.extra_fields)  # type: ignore[attr-defined]
+        extra_fields = getattr(record, "extra_fields", None)
+        if isinstance(extra_fields, dict):
+            log_data.update(extra_fields)
 
         return json.dumps(log_data)
 
@@ -81,13 +82,13 @@ class ConsoleFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         corr_id = correlation_id_ctx.get()
         corr_prefix = f"[{corr_id}] " if corr_id else ""
-        time_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        time_str = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
         msg = record.getMessage()
         exc = f"\n{self.formatException(record.exc_info)}" if record.exc_info else ""
         return f"{time_str} | {record.levelname:<8} | {record.name} | {corr_prefix}{msg}{exc}"
 
 
-def setup_logging(settings: Optional[Settings] = None) -> None:
+def setup_logging(settings: Settings | None = None) -> None:
     """Initialize application logging configuration."""
     if settings is None:
         settings = get_settings()

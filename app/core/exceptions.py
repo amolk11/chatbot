@@ -1,6 +1,6 @@
 """Core exception hierarchy for the AI Chatbot application."""
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class ChatbotError(Exception):
@@ -11,7 +11,7 @@ class ChatbotError(Exception):
         message: str,
         code: str = "INTERNAL_ERROR",
         status_code: int = 500,
-        details: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(message)
         self.message = message
@@ -19,7 +19,7 @@ class ChatbotError(Exception):
         self.status_code = status_code
         self.details = details or {}
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert exception to dictionary representation for API responses."""
         return {
             "error": {
@@ -33,7 +33,7 @@ class ChatbotError(Exception):
 class ConfigurationError(ChatbotError):
     """Raised when an invalid configuration is detected."""
 
-    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, message: str, details: dict[str, Any] | None = None) -> None:
         super().__init__(
             message=message,
             code="CONFIGURATION_ERROR",
@@ -45,7 +45,7 @@ class ConfigurationError(ChatbotError):
 class ValidationError(ChatbotError):
     """Raised when input validation fails."""
 
-    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, message: str, details: dict[str, Any] | None = None) -> None:
         super().__init__(
             message=message,
             code="VALIDATION_ERROR",
@@ -57,7 +57,7 @@ class ValidationError(ChatbotError):
 class ResourceNotFoundError(ChatbotError):
     """Raised when a requested resource is not found."""
 
-    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, message: str, details: dict[str, Any] | None = None) -> None:
         super().__init__(
             message=message,
             code="RESOURCE_NOT_FOUND",
@@ -74,7 +74,7 @@ class ExternalServiceError(ChatbotError):
         message: str,
         code: str = "EXTERNAL_SERVICE_ERROR",
         status_code: int = 502,
-        details: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(
             message=message,

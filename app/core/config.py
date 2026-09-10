@@ -1,7 +1,6 @@
 """Application configuration management using Pydantic Settings."""
 
 from functools import lru_cache
-from typing import List, Optional
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -27,7 +26,7 @@ class Settings(BaseSettings):
         description="Application environment: development, testing, production",
     )
     api_v1_prefix: str = Field(default="/api/v1", description="Prefix for API v1 routes")
-    cors_origins: List[str] = Field(
+    cors_origins: list[str] = Field(
         default=["*"],
         description="List of allowed CORS origins",
     )
@@ -40,15 +39,15 @@ class Settings(BaseSettings):
     )
 
     # LLM Settings (Placeholders for Future Phases)
-    llm_provider: Optional[str] = Field(
+    llm_provider: str | None = Field(
         default=None,
         description="LLM provider: openai, anthropic, google, or mock",
     )
-    llm_model: Optional[str] = Field(
+    llm_model: str | None = Field(
         default=None,
         description="Model name/identifier",
     )
-    llm_api_key: Optional[SecretStr] = Field(
+    llm_api_key: SecretStr | None = Field(
         default=None,
         description="Primary LLM provider API key",
     )
@@ -58,21 +57,21 @@ class Settings(BaseSettings):
         default=False,
         description="Enable LangSmith distributed tracing",
     )
-    langsmith_api_key: Optional[SecretStr] = Field(
+    langsmith_api_key: SecretStr | None = Field(
         default=None,
         description="LangSmith API key",
     )
-    langsmith_project: Optional[str] = Field(
+    langsmith_project: str | None = Field(
         default="chatbot-dev",
         description="LangSmith project name",
     )
 
     # Persistence & Caching Settings (Placeholders for Future Phases)
-    database_url: Optional[str] = Field(
+    database_url: str | None = Field(
         default=None,
         description="Database connection URL (e.g. sqlite+aiosqlite:///./chatbot.db or postgresql+asyncpg://...)",
     )
-    redis_url: Optional[str] = Field(
+    redis_url: str | None = Field(
         default=None,
         description="Redis connection URL (e.g. redis://localhost:6379/0)",
     )

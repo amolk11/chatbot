@@ -1,9 +1,9 @@
 """Core application constants and enumerations."""
 
-from enum import Enum
+from enum import StrEnum
 
 
-class AppEnvironment(str, Enum):
+class AppEnvironment(StrEnum):
     """Application runtime environment."""
 
     DEVELOPMENT = "development"
@@ -11,7 +11,7 @@ class AppEnvironment(str, Enum):
     PRODUCTION = "production"
 
 
-class LogLevel(str, Enum):
+class LogLevel(StrEnum):
     """Supported logging levels."""
 
     DEBUG = "DEBUG"
@@ -21,7 +21,7 @@ class LogLevel(str, Enum):
     CRITICAL = "CRITICAL"
 
 
-class LogFormat(str, Enum):
+class LogFormat(StrEnum):
     """Supported log output formats."""
 
     JSON = "json"
