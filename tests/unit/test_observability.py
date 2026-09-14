@@ -23,7 +23,6 @@ from app.observability.tracing import build_langgraph_trace_config
 from app.services.chat import ChatService
 
 
-
 def test_setup_langsmith_enabled() -> None:
     """Verify setup_langsmith accurately configures environment variables when enabled."""
     settings = Settings(
@@ -176,7 +175,6 @@ async def test_chat_service_observability_integration(
         cache_ttl_seconds=300,
     )
 
-
     response, conv_id = await chat_service.process_message(
         message="Hello observability",
         correlation_id="test-corr-id-001",
@@ -216,9 +214,10 @@ async def test_chat_service_observability_integration(
     assert snapshot2["counters"]["cache_hits_total"] >= 1
 
 
-
 @pytest.mark.asyncio
-async def test_openai_service_usage_and_timing_instrumentation(monkeypatch) -> None:
+async def test_openai_service_usage_and_timing_instrumentation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Verify OpenAILLMService records timing and token usage from completion response."""
     metrics.reset()
 
@@ -231,7 +230,8 @@ async def test_openai_service_usage_and_timing_instrumentation(monkeypatch) -> N
     fake_response.usage.completion_tokens = 24
     fake_response.usage.total_tokens = 36
 
-    async def mock_create(*args, **kwargs):
+    async def mock_create(*args: object, **kwargs: object) -> MagicMock:
+        del args, kwargs
         return fake_response
 
     service = OpenAILLMService(api_key="test-key-mock", model="gpt-4o-mini")

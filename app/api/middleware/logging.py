@@ -79,4 +79,3 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             )
             # Catch unhandled exceptions that escaped router handlers and return safe 500
             return await unhandled_exception_handler(request, exc)
-

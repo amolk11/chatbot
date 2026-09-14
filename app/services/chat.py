@@ -289,4 +289,3 @@ class ChatService:
             return assistant_response, active_conv_id
         finally:
             conversation_id_ctx.reset(conv_token)
-

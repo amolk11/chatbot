@@ -2,6 +2,8 @@
 
 from typing import Any
 
+from langchain_core.runnables import RunnableConfig
+
 
 def build_langgraph_trace_config(
     correlation_id: str | None = None,
@@ -9,7 +11,7 @@ def build_langgraph_trace_config(
     provider: str | None = None,
     model: str | None = None,
     app_env: str | None = None,
-) -> dict[str, Any]:
+) -> RunnableConfig:
     """Build a RunnableConfig dictionary for LangGraph / LangChain execution tracing.
 
     Extracts execution context and sets run names, metadata, and tags for LangSmith
@@ -41,10 +43,10 @@ def build_langgraph_trace_config(
         metadata["environment"] = app_env
         tags.append(f"env:{app_env}")
 
-    config: dict[str, Any] = {
-        "run_name": "langgraph_chatbot_turn",
-        "metadata": metadata,
-        "tags": tags,
-    }
+    config: RunnableConfig = RunnableConfig(
+        run_name="langgraph_chatbot_turn",
+        metadata=metadata,
+        tags=tags,
+    )
 
     return config

@@ -80,7 +80,6 @@ class Settings(BaseSettings):
         description="LangSmith API endpoint URL",
     )
 
-
     # Caching Settings (Phase 5)
     cache_enabled: bool = Field(
         default=False,

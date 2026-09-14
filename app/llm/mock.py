@@ -39,7 +39,9 @@ class MockLLMService:
         if self.should_fail:
             duration_ms = (time.monotonic() - start_time) * 1000
             exc = self.failure_exception or LLMError("Simulated mock LLM failure")
-            record_llm_event("mock_llm_error", self.provider_name, self.model_name, duration_ms, error=exc)
+            record_llm_event(
+                "mock_llm_error", self.provider_name, self.model_name, duration_ms, error=exc
+            )
             raise exc
 
         # Extract last user message text to provide contextual echo if applicable
@@ -59,4 +61,3 @@ class MockLLMService:
             text=response_text,
             role=MessageRole.ASSISTANT,
         )
-

@@ -92,7 +92,9 @@ class OpenAILLMService:
             )
         except openai.APITimeoutError as exc:
             duration_ms = (time.monotonic() - start_time) * 1000
-            record_llm_event("llm_timeout", self.provider_name, self.model_name, duration_ms, error=exc)
+            record_llm_event(
+                "llm_timeout", self.provider_name, self.model_name, duration_ms, error=exc
+            )
             logger.error("OpenAI request timed out after %.1fs: %s", request_timeout, exc)
             raise LLMTimeoutError(
                 message=f"OpenAI request exceeded timeout limit of {request_timeout}s.",
@@ -100,7 +102,9 @@ class OpenAILLMService:
             ) from exc
         except openai.APIStatusError as exc:
             duration_ms = (time.monotonic() - start_time) * 1000
-            record_llm_event("llm_api_error", self.provider_name, self.model_name, duration_ms, error=exc)
+            record_llm_event(
+                "llm_api_error", self.provider_name, self.model_name, duration_ms, error=exc
+            )
             logger.error(
                 "OpenAI returned API status error [%d]: %s",
                 exc.status_code,
@@ -112,7 +116,9 @@ class OpenAILLMService:
             ) from exc
         except openai.APIConnectionError as exc:
             duration_ms = (time.monotonic() - start_time) * 1000
-            record_llm_event("llm_connection_error", self.provider_name, self.model_name, duration_ms, error=exc)
+            record_llm_event(
+                "llm_connection_error", self.provider_name, self.model_name, duration_ms, error=exc
+            )
             logger.error("Failed to connect to OpenAI API: %s", exc)
             raise LLMProviderError(
                 message="Unable to connect to OpenAI provider API.",
@@ -120,7 +126,9 @@ class OpenAILLMService:
             ) from exc
         except openai.OpenAIError as exc:
             duration_ms = (time.monotonic() - start_time) * 1000
-            record_llm_event("llm_sdk_error", self.provider_name, self.model_name, duration_ms, error=exc)
+            record_llm_event(
+                "llm_sdk_error", self.provider_name, self.model_name, duration_ms, error=exc
+            )
             logger.error("OpenAI SDK general error: %s", exc)
             raise LLMProviderError(
                 message=f"OpenAI error: {str(exc)}",
@@ -128,7 +136,9 @@ class OpenAILLMService:
             ) from exc
         except Exception as exc:
             duration_ms = (time.monotonic() - start_time) * 1000
-            record_llm_event("llm_unexpected_error", self.provider_name, self.model_name, duration_ms, error=exc)
+            record_llm_event(
+                "llm_unexpected_error", self.provider_name, self.model_name, duration_ms, error=exc
+            )
             logger.error("Unexpected error during OpenAI generation: %s", exc, exc_info=True)
             raise LLMProviderError(
                 message="Unexpected error during LLM generation.",
@@ -169,4 +179,3 @@ class OpenAILLMService:
             role=MessageRole.ASSISTANT,
             message_id=response.id,
         )
-

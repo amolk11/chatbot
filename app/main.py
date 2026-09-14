@@ -27,7 +27,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Future Phase: Graceful teardown of connections and async task queues
 
 
-
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Application factory for the AI Chatbot FastAPI service."""
     app_settings = settings or get_settings()
