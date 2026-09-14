@@ -29,13 +29,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     """Application factory for the AI Chatbot FastAPI service."""
     app_settings = settings or get_settings()
 
+    is_public_api_docs = not app_settings.is_production
+
     app = FastAPI(
         title=app_settings.app_name,
         version=app_settings.app_version,
         description="Production-oriented modular AI Chatbot backend service.",
-        docs_url="/docs" if app_settings.is_development else None,
-        redoc_url="/redoc" if app_settings.is_development else None,
-        openapi_url="/openapi.json" if app_settings.is_development else None,
+        docs_url="/docs" if is_public_api_docs else None,
+        redoc_url="/redoc" if is_public_api_docs else None,
+        openapi_url="/openapi.json" if is_public_api_docs else None,
         lifespan=lifespan,
     )
 

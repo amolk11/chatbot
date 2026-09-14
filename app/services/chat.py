@@ -63,8 +63,13 @@ class ChatService:
 
         assistant_response: CanonicalMessage | None = result_state.get("response")
         if assistant_response is None:
-            logger.error("Chat graph execution returned null response state for message id=%s", user_message.id)
-            raise ValidationError("Workflow execution completed without producing an assistant response.")
+            logger.error(
+                "Chat graph execution returned null response state for message id=%s",
+                user_message.id,
+            )
+            raise ValidationError(
+                "Workflow execution completed without producing an assistant response."
+            )
 
         logger.info(
             "Chat workflow completed successfully. Produced response id=%s",

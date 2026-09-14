@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 
 class MessageRole(StrEnum):
@@ -63,6 +63,7 @@ class CanonicalMessage(BaseModel):
         description="UTC timestamp when the message was created",
     )
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def text(self) -> str:
         """Extract and concatenate all text content blocks."""
