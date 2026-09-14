@@ -71,4 +71,3 @@ def get_chat_service(
         cache_ttl_seconds=settings.cache_ttl_seconds,
         max_history_messages=settings.chat_history_max_messages,
     )
-

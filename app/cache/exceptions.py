@@ -1,19 +1,21 @@
 """Cache-specific exception definitions."""
 
-from app.core.exceptions import AppException
+from typing import Any
+
+from app.core.exceptions import ChatbotError
 
 
-class CacheError(AppException):
+class CacheError(ChatbotError):
     """Base exception for all caching-related failures."""
 
     def __init__(
         self,
         message: str = "A caching error occurred.",
-        details: dict[str, object] | None = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(
             message=message,
-            error_code="CACHE_ERROR",
+            code="CACHE_ERROR",
             status_code=500,
             details=details,
         )
@@ -25,10 +27,10 @@ class CacheConnectionError(CacheError):
     def __init__(
         self,
         message: str = "Failed to establish or maintain connection with cache backend.",
-        details: dict[str, object] | None = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(message=message, details=details)
-        self.error_code = "CACHE_CONNECTION_ERROR"
+        self.code = "CACHE_CONNECTION_ERROR"
 
 
 class CacheSerializationError(CacheError):
@@ -37,7 +39,7 @@ class CacheSerializationError(CacheError):
     def __init__(
         self,
         message: str = "Failed to serialize or deserialize cached content.",
-        details: dict[str, object] | None = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(message=message, details=details)
-        self.error_code = "CACHE_SERIALIZATION_ERROR"
+        self.code = "CACHE_SERIALIZATION_ERROR"

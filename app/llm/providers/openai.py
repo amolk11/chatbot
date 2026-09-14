@@ -39,6 +39,16 @@ class OpenAILLMService:
             base_url=base_url,
         )
 
+    @property
+    def provider_name(self) -> str:
+        """Provider name identifier."""
+        return "openai"
+
+    @property
+    def model_name(self) -> str:
+        """Configured model name identifier."""
+        return self._model
+
     def _convert_to_openai_messages(
         self, messages: list[CanonicalMessage]
     ) -> list[ChatCompletionMessageParam]:

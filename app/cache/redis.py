@@ -34,8 +34,11 @@ class RedisCacheAdapter(ICache):
     async def get(self, key: str) -> str | None:
         """Retrieve cached string value from Redis."""
         try:
-            val: str | None = await self._client.get(key)
-            return val
+            raw_val = await self._client.get(key)
+            if raw_val is None:
+                return None
+            return raw_val.decode("utf-8") if isinstance(raw_val, bytes) else str(raw_val)
+
         except RedisError as exc:
             logger.warning("Redis GET operation failed for key '%s': %s", key, exc)
             raise CacheConnectionError(f"Redis GET failed: {exc}") from exc

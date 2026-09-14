@@ -12,10 +12,14 @@ class MockLLMService:
         default_response: str = "This is a deterministic mock assistant response.",
         should_fail: bool = False,
         failure_exception: LLMError | None = None,
+        provider_name: str = "mock",
+        model_name: str = "mock-model",
     ) -> None:
         self.default_response = default_response
         self.should_fail = should_fail
         self.failure_exception = failure_exception
+        self.provider_name = provider_name
+        self.model_name = model_name
         self.recorded_calls: list[list[CanonicalMessage]] = []
 
     async def generate(

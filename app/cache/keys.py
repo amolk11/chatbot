@@ -47,7 +47,9 @@ def build_chat_cache_key(
             if isinstance(block, TextContentBlock):
                 serialized_blocks.append({"type": block.type.value, "text": block.text})
             else:
-                serialized_blocks.append({"type": str(block.type), "text": getattr(block, "text", "")})
+                serialized_blocks.append(
+                    {"type": str(block.type), "text": getattr(block, "text", "")}
+                )
 
         canonical_turns.append(
             {
@@ -63,7 +65,9 @@ def build_chat_cache_key(
     }
 
     # Deterministic JSON serialization: sorted keys, compact separators
-    preimage_bytes = json.dumps(preimage_dict, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    preimage_bytes = json.dumps(preimage_dict, sort_keys=True, separators=(",", ":")).encode(
+        "utf-8"
+    )
     context_hash = hashlib.sha256(preimage_bytes).hexdigest()
 
     return f"{CACHE_VERSION_PREFIX}:{conversation_id}:{context_hash}"

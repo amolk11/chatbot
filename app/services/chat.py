@@ -96,9 +96,10 @@ class ChatService:
                     conversation_id=active_conv_id,
                     history=history,
                     current_user_message=user_message,
-                    provider=self._llm_service.provider_name,
-                    model=self._llm_service.model_name,
+                    provider=getattr(self._llm_service, "provider_name", "default"),
+                    model=getattr(self._llm_service, "model_name", "default"),
                 )
+
                 raw_cached = await self._cache.get(cache_key)
                 if raw_cached is not None:
                     try:
@@ -123,7 +124,9 @@ class ChatService:
                             exc,
                         )
                 else:
-                    logger.debug("Cache MISS for key=%s (conversation_id=%s)", cache_key, active_conv_id)
+                    logger.debug(
+                        "Cache MISS for key=%s (conversation_id=%s)", cache_key, active_conv_id
+                    )
             except Exception as exc:
                 logger.warning(
                     "Cache lookup encountered non-fatal error: %s (falling back to normal LLM generation)",
@@ -175,13 +178,16 @@ class ChatService:
                     value=serialized_payload,
                     ttl=self._cache_ttl_seconds,
                 )
-                logger.debug("Populated cache for key=%s (ttl=%ds)", cache_key, self._cache_ttl_seconds)
+                logger.debug(
+                    "Populated cache for key=%s (ttl=%ds)", cache_key, self._cache_ttl_seconds
+                )
             except Exception as exc:
-                logger.warning("Cache write encountered non-fatal error for key=%s: %s", cache_key, exc)
+                logger.warning(
+                    "Cache write encountered non-fatal error for key=%s: %s", cache_key, exc
+                )
 
         logger.info(
             "Chat workflow and turn persistence completed successfully for conversation id=%s",
             active_conv_id,
         )
         return assistant_response, active_conv_id
-

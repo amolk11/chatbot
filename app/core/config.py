@@ -90,7 +90,6 @@ class Settings(BaseSettings):
         description="Redis connection URL (e.g. redis://localhost:6379/0)",
     )
 
-
     # Rate Limiting & Security (Future Phase 8)
     rate_limit_per_minute: int = Field(
         default=60,
