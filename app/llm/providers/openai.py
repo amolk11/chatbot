@@ -1,6 +1,7 @@
 """OpenAI provider adapter implementing ILLMService."""
 
 import logging
+import time
 from typing import Any
 
 import openai
@@ -14,6 +15,7 @@ from app.llm.exceptions import (
     LLMResponseParsingError,
     LLMTimeoutError,
 )
+from app.observability.events import record_llm_event
 
 logger = logging.getLogger("app.llm.openai")
 
@@ -81,6 +83,7 @@ class OpenAILLMService:
             request_timeout,
         )
 
+        start_time = time.monotonic()
         try:
             response = await self._client.chat.completions.create(
                 model=self._model,
@@ -88,12 +91,20 @@ class OpenAILLMService:
                 timeout=request_timeout,
             )
         except openai.APITimeoutError as exc:
+            duration_ms = (time.monotonic() - start_time) * 1000
+            record_llm_event(
+                "llm_timeout", self.provider_name, self.model_name, duration_ms, error=exc
+            )
             logger.error("OpenAI request timed out after %.1fs: %s", request_timeout, exc)
             raise LLMTimeoutError(
                 message=f"OpenAI request exceeded timeout limit of {request_timeout}s.",
                 details={"model": self._model, "timeout": request_timeout},
             ) from exc
         except openai.APIStatusError as exc:
+            duration_ms = (time.monotonic() - start_time) * 1000
+            record_llm_event(
+                "llm_api_error", self.provider_name, self.model_name, duration_ms, error=exc
+            )
             logger.error(
                 "OpenAI returned API status error [%d]: %s",
                 exc.status_code,
@@ -104,23 +115,37 @@ class OpenAILLMService:
                 details={"status_code": exc.status_code, "model": self._model},
             ) from exc
         except openai.APIConnectionError as exc:
+            duration_ms = (time.monotonic() - start_time) * 1000
+            record_llm_event(
+                "llm_connection_error", self.provider_name, self.model_name, duration_ms, error=exc
+            )
             logger.error("Failed to connect to OpenAI API: %s", exc)
             raise LLMProviderError(
                 message="Unable to connect to OpenAI provider API.",
                 details={"model": self._model},
             ) from exc
         except openai.OpenAIError as exc:
+            duration_ms = (time.monotonic() - start_time) * 1000
+            record_llm_event(
+                "llm_sdk_error", self.provider_name, self.model_name, duration_ms, error=exc
+            )
             logger.error("OpenAI SDK general error: %s", exc)
             raise LLMProviderError(
                 message=f"OpenAI error: {str(exc)}",
                 details={"model": self._model},
             ) from exc
         except Exception as exc:
+            duration_ms = (time.monotonic() - start_time) * 1000
+            record_llm_event(
+                "llm_unexpected_error", self.provider_name, self.model_name, duration_ms, error=exc
+            )
             logger.error("Unexpected error during OpenAI generation: %s", exc, exc_info=True)
             raise LLMProviderError(
                 message="Unexpected error during LLM generation.",
                 details={"model": self._model},
             ) from exc
+
+        duration_ms = (time.monotonic() - start_time) * 1000
 
         if not response.choices or not response.choices[0].message:
             raise LLMResponseParsingError(
@@ -134,6 +159,20 @@ class OpenAILLMService:
                 message="OpenAI returned null response content.",
                 details={"response_id": response.id},
             )
+
+        input_tokens = response.usage.prompt_tokens if response.usage else None
+        output_tokens = response.usage.completion_tokens if response.usage else None
+        total_tokens = response.usage.total_tokens if response.usage else None
+
+        record_llm_event(
+            event="llm_generate",
+            provider=self.provider_name,
+            model=self.model_name,
+            duration_ms=duration_ms,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            total_tokens=total_tokens,
+        )
 
         return CanonicalMessage.from_text(
             text=str(content),

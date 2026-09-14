@@ -13,6 +13,7 @@ from app.api.v1.endpoints import health
 from app.api.v1.router import api_v1_router
 from app.core.config import Settings, get_settings
 from app.core.logging import setup_logging
+from app.observability.langsmith import setup_langsmith
 
 
 @asynccontextmanager
@@ -20,6 +21,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Lifespan context manager for application startup and shutdown events."""
     settings: Settings = getattr(app.state, "settings", get_settings())
     setup_logging(settings)
+    setup_langsmith(settings)
     # Future Phase: Initialize database connection pools, Redis clients, LLM services
     yield
     # Future Phase: Graceful teardown of connections and async task queues
