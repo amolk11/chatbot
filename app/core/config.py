@@ -38,7 +38,7 @@ class Settings(BaseSettings):
         description="Logging format: console (human-readable) or json (production)",
     )
 
-    # LLM Settings (Placeholders for Future Phases)
+    # LLM Settings
     llm_provider: str | None = Field(
         default=None,
         description="LLM provider: openai, anthropic, google, or mock",
@@ -52,7 +52,17 @@ class Settings(BaseSettings):
         description="Primary LLM provider API key",
     )
 
-    # Observability & LangSmith Settings (Placeholders for Future Phases)
+    # Persistence Settings (Phase 4)
+    database_url: str = Field(
+        default="sqlite+aiosqlite:///./chatbot.db",
+        description="Database connection URL (e.g. sqlite+aiosqlite:///./chatbot.db or postgresql+asyncpg://...)",
+    )
+    chat_history_max_messages: int = Field(
+        default=50,
+        description="Maximum number of historical conversation messages to load for context",
+    )
+
+    # Observability & LangSmith Settings (Placeholders for Future Phase 6)
     langsmith_tracing: bool = Field(
         default=False,
         description="Enable LangSmith distributed tracing",
@@ -66,17 +76,13 @@ class Settings(BaseSettings):
         description="LangSmith project name",
     )
 
-    # Persistence & Caching Settings (Placeholders for Future Phases)
-    database_url: str | None = Field(
-        default=None,
-        description="Database connection URL (e.g. sqlite+aiosqlite:///./chatbot.db or postgresql+asyncpg://...)",
-    )
+    # Caching Settings (Placeholders for Future Phase 5)
     redis_url: str | None = Field(
         default=None,
         description="Redis connection URL (e.g. redis://localhost:6379/0)",
     )
 
-    # Rate Limiting & Security
+    # Rate Limiting & Security (Future Phase 8)
     rate_limit_per_minute: int = Field(
         default=60,
         description="Maximum allowed requests per minute per client IP/Key",
