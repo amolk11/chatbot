@@ -7,19 +7,19 @@ The application is structured as a **Modular Monolith** using **Hexagonal Archit
 Client (Web/Mobile/API)
        │
        ▼
-  API Layer (FastAPI)
+   API Layer (FastAPI)
        │
        ▼
- Service Layer (Orchestration)
+  Service Layer (ChatService Orchestration)
        │
        ▼
-  Workflow Layer (LangGraph)
+   Workflow Layer (LangGraph State Machine)
        │
        ▼
-  LLM Gateway Layer (ILLMService)
+   LLM Gateway Layer (ILLMService Port)
        │
        ▼
- External Providers & Infrastructure (OpenAI / Anthropic / Gemini / DB / Redis / LangSmith)
+  External Providers & Infrastructure (OpenAI Adapter / Mock Service / Future DB & Redis)
 ```
 
 ## 2. Layer Responsibilities & Dependency Boundaries
@@ -27,24 +27,42 @@ Client (Web/Mobile/API)
 | Layer | Responsibility | Permitted Imports | Forbidden Imports |
 | :--- | :--- | :--- | :--- |
 | **API (`app/api`)** | HTTP/SSE transport, DTO serialization, route handling, authentication & rate limiting middleware. | `app.schemas`, `app.services`, `app.core`, `FastAPI` | `app.db.models`, `app.graph`, raw DB drivers, direct LLM SDKs |
-| **Services (`app/services`)** | Application orchestration, transaction boundaries, combining domain processors, graphs, repositories, and caches. | `app.domain`, `app.schemas`, `app.graph`, `app.db (interfaces)`, `app.cache (interfaces)`, `app.core` | `FastAPI` (Request/Response objects), raw DB ORM sessions |
+| **Services (`app/services`)** | Application orchestration, transaction boundaries, combining domain processors, graphs, repositories, and caches. | `app.domain`, `app.schemas`, `app.graph`, `app.db (interfaces)`, `app.cache (interfaces)`, `app.core`, `app.llm (interfaces)` | `FastAPI` (Request/Response objects), raw DB ORM sessions |
 | **Domain (`app/domain`)** | Pure business entities (`CanonicalMessage`, `ContentBlock`), domain validation rules, input normalization. | Pure Python, `pydantic`, `app.core.exceptions` | `FastAPI`, `LangGraph`, `SQLAlchemy`, `Redis`, `app.api`, `app.services` |
-| **Graph (`app/graph`)** | AI workflow state definition, LangGraph node implementations, routing edges, context assembly. | `app.domain`, `app.llm (interfaces)`, `app.core` | `FastAPI`, `app.api`, `app.services`, ORM database queries directly |
-| **LLM Gateway (`app/llm`)** | Translates canonical domain messages into provider-specific prompts, manages retries, fallback switching, and streaming. | `app.domain`, `app.core`, `app.observability`, Provider SDKs | `FastAPI`, `app.api`, `app.services`, `app.db`, `app.cache` |
-| **Persistence (`app/db`)** | Relational data persistence, SQLAlchemy 2.0 async sessions, Alembic migrations, repository implementations. | `app.domain`, `app.core`, `SQLAlchemy`, `Alembic` | `FastAPI`, `app.api`, `app.graph`, `app.llm`, `app.services` |
-| **Cache (`app/cache`)** | Caching ports, Redis adapter, in-memory adapter, TTL and key management. | `app.core`, `redis-py` (adapter only) | `FastAPI`, `app.api`, `app.graph`, `app.services` |
+| **Graph (`app/graph`)** | AI workflow state definition (`ChatGraphState`), LangGraph node implementations (`validate`, `generate`, `format`), routing edges. | `app.domain`, `app.llm (interfaces)`, `app.core` | `FastAPI`, `app.api`, `app.services`, ORM database queries directly |
+| **LLM Gateway (`app/llm`)** | Translates canonical domain messages into provider-specific prompts, manages retries, fallback switching, and error mapping. | `app.domain`, `app.core`, Provider SDKs (OpenAI) | `FastAPI`, `app.api`, `app.services`, `app.db`, `app.cache` |
+| **Persistence (`app/db`)** | Relational data persistence, SQLAlchemy 2.0 async sessions, Alembic migrations, repository implementations (Phase 4). | `app.domain`, `app.core`, `SQLAlchemy`, `Alembic` | `FastAPI`, `app.api`, `app.graph`, `app.llm`, `app.services` |
+| **Cache (`app/cache`)** | Caching ports, Redis adapter, in-memory adapter, TTL and key management (Phase 5). | `app.core`, `redis-py` (adapter only) | `FastAPI`, `app.api`, `app.graph`, `app.services` |
 | **Core (`app/core`)** | Configuration (`BaseSettings`), constants, structured logging, exception hierarchy. | Pure Python, `pydantic-settings` | All other `app/*` modules |
 
-## 3. Multimodal Strategy
+## 3. LangGraph Workflow Execution Flow
+
+```text
+ChatGraphState (messages, response, error)
+    │
+    ▼
+1. validate_node: Validates non-empty message sequence and user text payload.
+    │
+    ▼
+2. generate_node (GenerateNode): Invocates ILLMService.generate(messages).
+    │
+    ▼
+3. format_node: Normalizes assistant CanonicalMessage into output state.
+    │
+    ▼
+END
+```
+
+## 4. Multimodal Strategy
 The domain model uses polymorphic content blocks (`TextContentBlock`, `ImageContentBlock`, `AudioContentBlock`, `FileRefContentBlock`) from Day 1.
 While Phase 1-3 activate text only, the schema design prevents any database or API rewrites when activating vision and audio in Phase 9.
 
-## 4. Phase Roadmap Summary
+## 5. Phase Roadmap Summary
 - **Phase 0**: Architecture & Technical Specification *(Completed)*
-- **Phase 1**: Project Foundation + Git + Engineering Tooling *(Current)*
-- **Phase 2**: FastAPI Foundation & Health Endpoints
-- **Phase 3**: Basic LangGraph Chatbot Workflow
-- **Phase 4**: Persistence & Conversation History
+- **Phase 1**: Project Foundation + Git + Engineering Tooling *(Completed)*
+- **Phase 2**: FastAPI Foundation & Health Endpoints *(Completed)*
+- **Phase 3**: Basic LangGraph Chatbot Workflow & LLM Gateway *(Completed)*
+- **Phase 4**: Persistence & Conversation History *(Next)*
 - **Phase 5**: Caching Layer (In-Memory & Redis)
 - **Phase 6**: LangSmith Observability & Tracing
 - **Phase 7**: Automated Testing & Evaluation Suite

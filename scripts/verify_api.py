@@ -1,4 +1,4 @@
-"""Manual verification script for Phase 2 FastAPI Foundation."""
+"""Manual verification script for Phase 3 LangGraph Chatbot & LLM Gateway."""
 
 import asyncio
 import json
@@ -11,39 +11,38 @@ from app.main import app
 async def main() -> None:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://127.0.0.1:8000") as client:
-        # 1. Health Probe
+        print("=== 1. Health Probe ===")
         r1 = await client.get("/health")
-        print(
-            f"1. /health -> Status: {r1.status_code}, Correlation-ID: {r1.headers.get('x-correlation-id')}"
-        )
-        print(f"   Body: {json.dumps(r1.json())}")
+        print(f"Status: {r1.status_code}, Correlation-ID: {r1.headers.get('x-correlation-id')}")
+        print(f"Body: {json.dumps(r1.json())}")
 
-        # 2. Readiness Probe
+        print("\n=== 2. Readiness Probe ===")
         r2 = await client.get("/health/ready")
-        print(
-            f"2. /health/ready -> Status: {r2.status_code}, Correlation-ID: {r2.headers.get('x-correlation-id')}"
+        print(f"Status: {r2.status_code}, Correlation-ID: {r2.headers.get('x-correlation-id')}")
+        print(f"Body: {json.dumps(r2.json())}")
+
+        print("\n=== 3. Chat API - Standard Turn ===")
+        chat_payload = {
+            "message": "echo: Hello AI Chatbot!",
+            "conversation_id": "manual-session-123",
+        }
+        r3 = await client.post(
+            "/api/v1/chat",
+            json=chat_payload,
+            headers={"X-Correlation-ID": "manual-trace-001"},
         )
-        print(f"   Body: {json.dumps(r2.json())}")
+        print(f"Status: {r3.status_code}, Correlation-ID: {r3.headers.get('x-correlation-id')}")
+        print(f"Response Body: {json.dumps(r3.json(), indent=2)}")
 
-        # 3. Custom Correlation ID Propagation
-        custom_id = "test-session-trace-789"
-        r3 = await client.get("/health", headers={"X-Correlation-ID": custom_id})
-        print(
-            f"3. Custom X-Correlation-ID sent: {custom_id} -> Returned: {r3.headers.get('x-correlation-id')}"
-        )
+        print("\n=== 4. Chat API - Validation Error (Empty Message) ===")
+        r4 = await client.post("/api/v1/chat", json={"message": ""})
+        print(f"Status: {r4.status_code}, Correlation-ID: {r4.headers.get('x-correlation-id')}")
+        print(f"Response Body: {json.dumps(r4.json(), indent=2)}")
 
-        # 4. Versioned Route
-        r4 = await client.get("/api/v1/health")
-        print(f"4. /api/v1/health -> Status: {r4.status_code}, Body: {json.dumps(r4.json())}")
-
-        # 5. OpenAPI Registration
+        print("\n=== 5. OpenAPI Registration ===")
         r5 = await client.get("/openapi.json")
         paths = list(r5.json().get("paths", {}).keys())
-        print(f"5. OpenAPI Schema -> Status: {r5.status_code}, Registered Routes: {paths}")
-
-        # 6. Standardized 404 Error Contract
-        r6 = await client.get("/unmapped-route")
-        print(f"6. 404 Error -> Status: {r6.status_code}, Body: {json.dumps(r6.json())}")
+        print(f"Status: {r5.status_code}, Registered Routes: {paths}")
 
 
 if __name__ == "__main__":
