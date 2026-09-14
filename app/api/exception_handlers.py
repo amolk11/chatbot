@@ -4,7 +4,7 @@ import logging
 from collections.abc import Sequence
 from typing import Any
 
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -58,9 +58,7 @@ async def chatbot_error_handler(request: Request, exc: ChatbotError) -> JSONResp
     )
 
 
-async def validation_error_handler(
-    request: Request, exc: RequestValidationError
-) -> JSONResponse:
+async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     """Handle FastAPI and Pydantic request validation exceptions."""
     correlation_id = getattr(request.state, "correlation_id", None) or correlation_id_ctx.get()
     sanitized_errors = format_validation_errors(exc.errors())
@@ -82,14 +80,12 @@ async def validation_error_handler(
         )
     )
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=422,
         content=error_payload.model_dump(exclude_none=True),
     )
 
 
-async def http_exception_handler(
-    request: Request, exc: StarletteHTTPException
-) -> JSONResponse:
+async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
     """Handle Starlette and FastAPI HTTP exceptions (e.g. 404, 405)."""
     correlation_id = getattr(request.state, "correlation_id", None) or correlation_id_ctx.get()
 
@@ -129,7 +125,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
         )
     )
     return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        status_code=500,
         content=error_payload.model_dump(exclude_none=True),
     )
 

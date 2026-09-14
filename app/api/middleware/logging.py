@@ -6,6 +6,7 @@ import time
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
+from app.api.exception_handlers import unhandled_exception_handler
 from app.core.logging import correlation_id_ctx
 
 logger = logging.getLogger("app.api.request")
@@ -66,4 +67,5 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                     }
                 },
             )
-            raise
+            # Catch unhandled exceptions that escaped router handlers and return safe 500
+            return await unhandled_exception_handler(request, exc)
