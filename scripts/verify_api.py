@@ -1,15 +1,18 @@
-"""Manual verification script for Phase 5 Redis Caching & Cache Management."""
+"""Manual verification script for Phase 6 Observability, LangSmith & Monitoring."""
 
 import asyncio
 import json
 
 from httpx import ASGITransport, AsyncClient
+from pydantic import SecretStr
 
 from app.cache.memory import InMemoryCache
 from app.core.config import Settings
 from app.db.base import Base
 from app.db.session import get_engine
 from app.main import create_app
+from app.observability.langsmith import setup_langsmith
+from app.observability.metrics import metrics
 
 
 async def main() -> None:
@@ -18,8 +21,15 @@ async def main() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    # Initialize app with caching enabled in-memory
-    settings = Settings(cache_enabled=True, cache_ttl_seconds=3600)
+    # Initialize app with observability and caching enabled
+    settings = Settings(
+        cache_enabled=True,
+        cache_ttl_seconds=3600,
+        langsmith_tracing=False,
+        langsmith_api_key=SecretStr("lsv2_pt_manual_test_key_12345"),
+        langsmith_project="chatbot-manual-verify",
+    )
+    setup_langsmith(settings)
     app = create_app(settings=settings)
     in_memory_cache = InMemoryCache()
 
@@ -40,31 +50,29 @@ async def main() -> None:
         print(f"Status: {r2.status_code}, Correlation-ID: {r2.headers.get('x-correlation-id')}")
         print(f"Body: {json.dumps(r2.json())}")
 
-        print("\n=== 3. Chat API - Turn 1 (New Conversation - Cache MISS) ===")
+        print("\n=== 3. Chat API - Turn 1 (New Conversation - Cache MISS + Trace Context) ===")
         r3 = await client.post(
             "/api/v1/chat",
-            json={"message": "echo: What is caching?"},
-            headers={"X-Correlation-ID": "manual-trace-001"},
+            json={"message": "echo: What is observability?"},
+            headers={"X-Correlation-ID": "manual-obs-trace-001"},
         )
         print(f"Status: {r3.status_code}, Correlation-ID: {r3.headers.get('x-correlation-id')}")
         data_3 = r3.json()
         print(f"Response Body: {json.dumps(data_3, indent=2)}")
         conv_id = data_3.get("conversation_id")
         print(f"Generated conversation_id: {conv_id}")
-        print(f"Cache keys stored: {list(in_memory_cache._store.keys())}")
 
-        print("\n=== 4. Chat API - Turn 2 (Continuation - Context Change -> Cache MISS) ===")
+        print("\n=== 4. Chat API - Turn 2 (Continuation - Context Change) ===")
         r4 = await client.post(
             "/api/v1/chat",
             json={
-                "message": "echo: Tell me more about TTL.",
+                "message": "echo: Tell me more about LangSmith tracing.",
                 "conversation_id": conv_id,
             },
-            headers={"X-Correlation-ID": "manual-trace-002"},
+            headers={"X-Correlation-ID": "manual-obs-trace-002"},
         )
         print(f"Status: {r4.status_code}, Correlation-ID: {r4.headers.get('x-correlation-id')}")
         print(f"Response Body: {json.dumps(r4.json(), indent=2)}")
-        print(f"Total Cache keys stored: {len(in_memory_cache._store)}")
 
         print("\n=== 5. Chat API - Nonexistent conversation_id (Expect 404) ===")
         r5 = await client.post(
@@ -73,15 +81,14 @@ async def main() -> None:
                 "message": "Hello",
                 "conversation_id": "nonexistent-conversation-uuid-9999",
             },
-            headers={"X-Correlation-ID": "manual-trace-003"},
+            headers={"X-Correlation-ID": "manual-obs-trace-003"},
         )
         print(f"Status: {r5.status_code}, Correlation-ID: {r5.headers.get('x-correlation-id')}")
         print(f"Response Body: {json.dumps(r5.json(), indent=2)}")
 
-        print("\n=== 6. Chat API - Validation Error (Empty Message) ===")
-        r6 = await client.post("/api/v1/chat", json={"message": ""})
-        print(f"Status: {r6.status_code}, Correlation-ID: {r6.headers.get('x-correlation-id')}")
-        print(f"Response Body: {json.dumps(r6.json(), indent=2)}")
+        print("\n=== 6. Process Metrics Snapshot ===")
+        snapshot = metrics.get_snapshot()
+        print(f"Metrics Snapshot: {json.dumps(snapshot, indent=2)}")
 
         print("\n=== 7. OpenAPI Registration ===")
         r7 = await client.get("/openapi.json")
