@@ -16,19 +16,19 @@ router = APIRouter(tags=["Chat"])
     response_model=ChatResponse,
     status_code=status.HTTP_200_OK,
     summary="Execute Chat Turn",
-    description="Processes a user conversation turn via LangGraph and the configured LLM provider.",
+    description="Processes a user conversation turn via LangGraph, loaded conversation history, and the configured LLM provider.",
 )
 async def execute_chat_turn(
     request: ChatRequest,
     chat_service: Annotated[ChatService, Depends(get_chat_service)],
 ) -> ChatResponse:
-    """Execute single-turn chat interaction through the LangGraph AI workflow."""
-    assistant_message = await chat_service.process_message(
+    """Execute single-turn chat interaction with persistent conversation history."""
+    assistant_message, active_conversation_id = await chat_service.process_message(
         message=request.message,
         conversation_id=request.conversation_id,
     )
 
     return ChatResponse(
         message=assistant_message,
-        conversation_id=request.conversation_id,
+        conversation_id=active_conversation_id,
     )

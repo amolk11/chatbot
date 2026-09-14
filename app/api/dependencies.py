@@ -1,13 +1,25 @@
-"""FastAPI dependency injection providers for settings, LLM gateway, and services."""
+"""FastAPI dependency injection providers for settings, LLM gateway, database, and services."""
 
 from typing import Annotated
 
 from fastapi import Depends, Request
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
+from app.db.interfaces import IConversationRepository
+from app.db.repositories.conversation import SQLAlchemyConversationRepository
+from app.db.session import get_db_session
 from app.llm.factory import create_llm_service
 from app.llm.interfaces import ILLMService
 from app.services.chat import ChatService
+
+__all__ = [
+    "get_app_settings",
+    "get_chat_service",
+    "get_conversation_repository",
+    "get_db_session",
+    "get_llm_service",
+]
 
 
 def get_app_settings(request: Request) -> Settings:
@@ -25,8 +37,23 @@ def get_llm_service(
     return create_llm_service(settings)
 
 
+def get_conversation_repository(
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> IConversationRepository:
+    """Dependency provider for conversation persistence repository."""
+    return SQLAlchemyConversationRepository(session)
+
+
 def get_chat_service(
     llm_service: Annotated[ILLMService, Depends(get_llm_service)],
+    conversation_repository: Annotated[
+        IConversationRepository, Depends(get_conversation_repository)
+    ],
+    settings: Annotated[Settings, Depends(get_app_settings)],
 ) -> ChatService:
     """Dependency provider for the Chat orchestration application service."""
-    return ChatService(llm_service=llm_service)
+    return ChatService(
+        llm_service=llm_service,
+        conversation_repository=conversation_repository,
+        max_history_messages=settings.chat_history_max_messages,
+    )
