@@ -29,7 +29,7 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv pip install --system -e ".[dev]"
+        run: uv pip install --system --break-system-packages -e ".[dev]"
 
       - name: Run Ruff Linter
         run: ruff check .
@@ -38,7 +38,8 @@ jobs:
         run: ruff format --check .
 
       - name: Run MyPy Type Checker
-        run: mypy app tests
+        run: mypy app tests scripts
 
       - name: Run Pytest Suite
         run: pytest
+
