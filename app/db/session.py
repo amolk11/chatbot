@@ -85,11 +85,9 @@ def get_session_factory(settings: Settings | None = None) -> async_sessionmaker[
     return _cached_session_factory
 
 
-async def get_db_session(
-    settings: Settings | None = None,
-) -> AsyncGenerator[AsyncSession, None]:
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     """FastAPI dependency yielding an isolated async database session."""
-    session_factory = get_session_factory(settings)
+    session_factory = get_session_factory()
     async with session_factory() as session:
         try:
             yield session

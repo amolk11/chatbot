@@ -1,20 +1,26 @@
-"""API tests for the POST /api/v1/chat endpoint."""
+"""API tests for the POST /api/v1/chat endpoint with persistent conversations."""
+
+from collections.abc import AsyncGenerator
+from typing import TYPE_CHECKING
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies import get_llm_service
+from app.api.dependencies import get_db_session, get_llm_service
 from app.llm.exceptions import LLMProviderError, LLMTimeoutError
 from app.llm.mock import MockLLMService
 from app.main import create_app
 
+if TYPE_CHECKING:
+    from fastapi import FastAPI
+
 
 @pytest.mark.asyncio
-async def test_chat_api_endpoint_success(async_client: AsyncClient) -> None:
-    """Verify POST /api/v1/chat returns 200 and standard ChatResponse schema."""
+async def test_chat_api_first_turn_generates_conversation_id(async_client: AsyncClient) -> None:
+    """Verify POST /api/v1/chat without conversation_id generates a new conversation ID and returns 200."""
     payload = {
         "message": "echo: Hello from FastAPI Chat!",
-        "conversation_id": "test-conv-001",
     }
     response = await async_client.post("/api/v1/chat", json=payload)
 
@@ -23,8 +29,45 @@ async def test_chat_api_endpoint_success(async_client: AsyncClient) -> None:
     assert "message" in data
     assert data["message"]["role"] == "assistant"
     assert data["message"]["text"] == "Echo: Hello from FastAPI Chat!"
-    assert data["conversation_id"] == "test-conv-001"
+    assert data["conversation_id"] is not None
+    assert len(data["conversation_id"]) > 0
     assert "X-Correlation-ID" in response.headers
+
+
+@pytest.mark.asyncio
+async def test_chat_api_continuation_with_existing_conversation_id(
+    async_client: AsyncClient,
+) -> None:
+    """Verify continuing an existing conversation by passing the returned conversation_id."""
+    # Turn 1
+    resp_turn_1 = await async_client.post("/api/v1/chat", json={"message": "echo: First message"})
+    assert resp_turn_1.status_code == 200
+    conv_id = resp_turn_1.json()["conversation_id"]
+
+    # Turn 2
+    resp_turn_2 = await async_client.post(
+        "/api/v1/chat",
+        json={"message": "echo: Second message", "conversation_id": conv_id},
+    )
+    assert resp_turn_2.status_code == 200
+    assert resp_turn_2.json()["conversation_id"] == conv_id
+    assert resp_turn_2.json()["message"]["text"] == "Echo: Second message"
+
+
+@pytest.mark.asyncio
+async def test_chat_api_unknown_conversation_id_returns_404(async_client: AsyncClient) -> None:
+    """Verify providing an unknown conversation ID returns HTTP 404 with structured error."""
+    payload = {
+        "message": "Hello",
+        "conversation_id": "nonexistent-conversation-uuid-9999",
+    }
+    response = await async_client.post("/api/v1/chat", json=payload)
+
+    assert response.status_code == 404
+    data = response.json()
+    assert data["error"]["code"] == "CONVERSATION_NOT_FOUND"
+    assert "nonexistent-conversation-uuid-9999" in data["error"]["message"]
+    assert "correlation_id" in data["error"]
 
 
 @pytest.mark.asyncio
@@ -62,15 +105,20 @@ async def test_chat_api_missing_message_field(async_client: AsyncClient) -> None
 
 
 @pytest.mark.asyncio
-async def test_chat_api_llm_provider_error_handling() -> None:
+async def test_chat_api_llm_provider_error_handling(test_db_session: AsyncSession) -> None:
     """Verify downstream LLM provider failure is mapped to 502 with structured error response."""
-    test_app = create_app()
+    test_app: FastAPI = create_app()
 
     failing_llm = MockLLMService(
         should_fail=True,
         failure_exception=LLMProviderError("Provider unavailable", details={"provider": "mock"}),
     )
     test_app.dependency_overrides[get_llm_service] = lambda: failing_llm
+
+    async def override_db() -> AsyncGenerator[AsyncSession, None]:
+        yield test_db_session
+
+    test_app.dependency_overrides[get_db_session] = override_db
 
     transport = ASGITransport(app=test_app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -84,15 +132,20 @@ async def test_chat_api_llm_provider_error_handling() -> None:
 
 
 @pytest.mark.asyncio
-async def test_chat_api_llm_timeout_error_handling() -> None:
+async def test_chat_api_llm_timeout_error_handling(test_db_session: AsyncSession) -> None:
     """Verify downstream LLM timeout failure is mapped to 504 Gateway Timeout."""
-    test_app = create_app()
+    test_app: FastAPI = create_app()
 
     timing_out_llm = MockLLMService(
         should_fail=True,
         failure_exception=LLMTimeoutError("Provider request exceeded 30s timeout."),
     )
     test_app.dependency_overrides[get_llm_service] = lambda: timing_out_llm
+
+    async def override_db() -> AsyncGenerator[AsyncSession, None]:
+        yield test_db_session
+
+    test_app.dependency_overrides[get_db_session] = override_db
 
     transport = ASGITransport(app=test_app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:

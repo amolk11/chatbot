@@ -13,6 +13,14 @@ from app.llm.factory import create_llm_service
 from app.llm.interfaces import ILLMService
 from app.services.chat import ChatService
 
+__all__ = [
+    "get_app_settings",
+    "get_chat_service",
+    "get_conversation_repository",
+    "get_db_session",
+    "get_llm_service",
+]
+
 
 def get_app_settings(request: Request) -> Settings:
     """Dependency provider for application settings, isolated via request app state."""

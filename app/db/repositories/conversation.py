@@ -74,8 +74,7 @@ class SQLAlchemyConversationRepository:
             for msg_model in models:
                 raw_content: list[dict[str, Any]] = msg_model.content or []
                 content_blocks = [
-                    TextContentBlock.model_validate(block_data)
-                    for block_data in raw_content
+                    TextContentBlock.model_validate(block_data) for block_data in raw_content
                 ]
                 canonical_messages.append(
                     CanonicalMessage(
@@ -150,7 +149,7 @@ class SQLAlchemyConversationRepository:
             conv.updated_at = now
 
             self._session.add_all([user_model, assistant_model])
-            await self._session.flush()
+            await self._session.commit()
 
             logger.info(
                 "Persisted chat turn for conversation id=%s (sequences %d, %d)",
@@ -158,6 +157,7 @@ class SQLAlchemyConversationRepository:
                 user_model.sequence_number,
                 assistant_model.sequence_number,
             )
+
         except ConversationNotFoundError:
             raise
         except Exception as exc:

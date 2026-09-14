@@ -21,24 +21,17 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Set database URL dynamically from application settings
+# Set database URL dynamically from application settings if not explicitly configured
 settings = get_settings()
-config.set_main_option("sqlalchemy.url", settings.database_url)
+existing_url = config.get_main_option("sqlalchemy.url")
+target_url = existing_url if existing_url and existing_url != "sqlite+aiosqlite:///./chatbot.db" else settings.database_url
+config.set_main_option("sqlalchemy.url", target_url)
 
 target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode.
-
-    This configures the context with just a URL
-    and not an Engine, though an Engine is acceptable
-    here as well.  By skipping the Engine creation
-    we don't even need a DBAPI to be available.
-
-    Calls to context.execute() here emit the given string to the
-    script output.
-    """
+    """Run migrations in 'offline' mode."""
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
@@ -68,7 +61,7 @@ async def run_async_migrations() -> None:
     and associate a connection with the context.
     """
     configuration = config.get_section(config.config_ini_section, {})
-    configuration["sqlalchemy.url"] = settings.database_url
+    configuration["sqlalchemy.url"] = config.get_main_option("sqlalchemy.url")
 
     connectable = async_engine_from_config(
         configuration,

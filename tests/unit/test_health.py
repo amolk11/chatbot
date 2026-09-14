@@ -1,5 +1,7 @@
 """Unit and API tests for health and readiness probes."""
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from httpx import AsyncClient
 
@@ -32,8 +34,10 @@ async def test_health_check_v1_endpoint(async_client: AsyncClient, test_settings
 
 
 @pytest.mark.asyncio
-async def test_readiness_check_endpoint(async_client: AsyncClient, test_settings: Settings) -> None:
-    """Verify GET /health/ready returns 200 and component checks map."""
+async def test_readiness_check_endpoint_success(
+    async_client: AsyncClient, test_settings: Settings
+) -> None:
+    """Verify GET /health/ready returns 200 and both API and Database ready status."""
     response = await async_client.get("/health/ready")
 
     assert response.status_code == 200
@@ -43,3 +47,20 @@ async def test_readiness_check_endpoint(async_client: AsyncClient, test_settings
     assert data["environment"] == test_settings.app_env.value
     assert "checks" in data
     assert data["checks"]["api"] == "ready"
+    assert data["checks"]["database"] == "ready"
+
+
+@pytest.mark.asyncio
+async def test_readiness_check_endpoint_database_failure(async_client: AsyncClient) -> None:
+    """Verify GET /health/ready returns 503 when database connectivity probe fails."""
+    with patch(
+        "app.api.v1.endpoints.health.check_database_connection",
+        new=AsyncMock(return_value=False),
+    ):
+        response = await async_client.get("/health/ready")
+
+    assert response.status_code == 503
+    data = response.json()
+    assert data["error"]["code"] == "DATABASE_UNAVAILABLE"
+    assert "Database connectivity check failed" in data["error"]["message"]
+    assert data["error"]["details"]["database"] == "unavailable"
