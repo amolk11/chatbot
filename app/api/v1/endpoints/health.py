@@ -6,6 +6,8 @@ from fastapi import APIRouter, Depends, status
 
 from app.api.dependencies import get_app_settings
 from app.core.config import Settings
+from app.core.exceptions import ExternalServiceError
+from app.db.session import check_database_connection, get_session_factory
 from app.schemas.common import HealthResponse, ReadinessResponse
 
 router = APIRouter(tags=["Health"])
@@ -34,17 +36,28 @@ async def health_check(
     response_model=ReadinessResponse,
     status_code=status.HTTP_200_OK,
     summary="Readiness Probe",
-    description="Determines whether the application is fully initialized and ready to accept traffic.",
+    description="Determines whether the application and its critical persistence dependencies are ready to accept traffic.",
 )
 async def readiness_check(
     settings: Annotated[Settings, Depends(get_app_settings)],
 ) -> ReadinessResponse:
-    """Readiness probe extensible for future infrastructure dependency verification."""
-    # Note: In Phase 2, there are no external dependencies (DB/Redis/LLM).
-    # In future phases, readiness checks for database, cache, and LLM services will be registered here.
+    """Readiness probe verifying API state and database connectivity."""
+    session_factory = get_session_factory(settings)
+    is_db_ready = await check_database_connection(session_factory)
+
     checks = {
         "api": "ready",
+        "database": "ready" if is_db_ready else "unavailable",
     }
+
+    if not is_db_ready:
+        raise ExternalServiceError(
+            message="Database connectivity check failed during readiness probe.",
+            code="DATABASE_UNAVAILABLE",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            details=checks,
+        )
+
     return ReadinessResponse(
         status="ready",
         version=settings.app_version,
