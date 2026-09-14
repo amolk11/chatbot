@@ -5,6 +5,8 @@ from typing import Annotated
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.cache.factory import create_cache_service
+from app.cache.interfaces import ICache
 from app.core.config import Settings, get_settings
 from app.db.interfaces import IConversationRepository
 from app.db.repositories.conversation import SQLAlchemyConversationRepository
@@ -15,6 +17,7 @@ from app.services.chat import ChatService
 
 __all__ = [
     "get_app_settings",
+    "get_cache_service",
     "get_chat_service",
     "get_conversation_repository",
     "get_db_session",
@@ -44,16 +47,27 @@ def get_conversation_repository(
     return SQLAlchemyConversationRepository(session)
 
 
+def get_cache_service(
+    settings: Annotated[Settings, Depends(get_app_settings)],
+) -> ICache:
+    """Dependency provider for the application cache service."""
+    return create_cache_service(settings)
+
+
 def get_chat_service(
     llm_service: Annotated[ILLMService, Depends(get_llm_service)],
     conversation_repository: Annotated[
         IConversationRepository, Depends(get_conversation_repository)
     ],
+    cache_service: Annotated[ICache, Depends(get_cache_service)],
     settings: Annotated[Settings, Depends(get_app_settings)],
 ) -> ChatService:
     """Dependency provider for the Chat orchestration application service."""
     return ChatService(
         llm_service=llm_service,
         conversation_repository=conversation_repository,
+        cache=cache_service,
+        cache_enabled=settings.cache_enabled,
+        cache_ttl_seconds=settings.cache_ttl_seconds,
         max_history_messages=settings.chat_history_max_messages,
     )

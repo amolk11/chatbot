@@ -76,9 +76,17 @@ class Settings(BaseSettings):
         description="LangSmith project name",
     )
 
-    # Caching Settings (Placeholders for Future Phase 5)
+    # Caching Settings (Phase 5)
+    cache_enabled: bool = Field(
+        default=False,
+        description="Enable conversational response caching layer",
+    )
+    cache_ttl_seconds: int = Field(
+        default=3600,
+        description="Cache expiration Time-To-Live in seconds",
+    )
     redis_url: str | None = Field(
-        default=None,
+        default="redis://localhost:6379/0",
         description="Redis connection URL (e.g. redis://localhost:6379/0)",
     )
 
