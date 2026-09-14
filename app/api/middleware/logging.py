@@ -8,6 +8,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 
 from app.api.exception_handlers import unhandled_exception_handler
 from app.core.logging import correlation_id_ctx
+from app.observability.metrics import metrics
 
 logger = logging.getLogger("app.api.request")
 
@@ -31,6 +32,11 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
             status_code = response.status_code
 
+            metrics.increment("http_requests_total")
+            metrics.record_timing("http_duration_ms", duration_ms)
+            if status_code >= 500:
+                metrics.increment("http_request_errors_total")
+
             logger.info(
                 "HTTP request %s %s completed with status %d in %.2fms",
                 method,
@@ -50,6 +56,10 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             return response
         except Exception as exc:
             duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+            metrics.increment("http_requests_total")
+            metrics.increment("http_request_errors_total")
+            metrics.record_timing("http_duration_ms", duration_ms)
+
             logger.error(
                 "HTTP request %s %s failed after %.2fms: %s",
                 method,
@@ -69,3 +79,4 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             )
             # Catch unhandled exceptions that escaped router handlers and return safe 500
             return await unhandled_exception_handler(request, exc)
+
