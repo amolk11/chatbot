@@ -62,7 +62,7 @@ class Settings(BaseSettings):
         description="Maximum number of historical conversation messages to load for context",
     )
 
-    # Observability & LangSmith Settings (Placeholders for Future Phase 6)
+    # Observability & LangSmith Settings (Phase 6)
     langsmith_tracing: bool = Field(
         default=False,
         description="Enable LangSmith distributed tracing",
@@ -75,6 +75,11 @@ class Settings(BaseSettings):
         default="chatbot-dev",
         description="LangSmith project name",
     )
+    langsmith_endpoint: str | None = Field(
+        default="https://api.smith.langchain.com",
+        description="LangSmith API endpoint URL",
+    )
+
 
     # Caching Settings (Phase 5)
     cache_enabled: bool = Field(
