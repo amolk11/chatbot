@@ -12,6 +12,8 @@ dependencies = [
     "uvicorn[standard]>=0.30.0",
     "pydantic>=2.8.0",
     "pydantic-settings>=2.4.0",
+    "langgraph>=0.2.0",
+    "openai>=1.40.0",
 ]
 
 [project.optional-dependencies]
@@ -33,7 +35,7 @@ packages = ["app"]
 [tool.ruff]
 target-version = "py311"
 line-length = 100
-src = ["app", "tests"]
+src = ["app", "tests", "scripts"]
 include = ["*.py", "*.pyi"]
 exclude = [
     ".git",
